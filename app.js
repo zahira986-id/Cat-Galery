@@ -28,7 +28,16 @@ app.get("/cats", (req, res) => {
             console.error(err);
             return res.status(500).json({ error: "DB connection error" });
         }
-        connection.query("SELECT * FROM cats", (err, rows) => {
+        let query = "SELECT * FROM cats";
+        let queryParams = [];
+
+        if (req.query.search) {
+            query += " WHERE name LIKE ?";
+            queryParams.push(`%${req.query.search}%`);
+        }
+
+        connection.query(query, queryParams, (err, rows) => {
+            connection.release();
             if (err) {
                 console.error(err);
                 return res.status(500).json({ error: "DB query error" });
@@ -45,6 +54,7 @@ app.get("/cats/:id", (req, res) => {
             return res.status(500).json({ error: "DB connection error" });
         }
         connection.query("SELECT * FROM cats WHERE id = ?", [req.params.id], (err, rows) => {//sql injection protection
+            connection.release();
             if (err) {
                 console.error(err);
                 return res.status(500).json({ error: "DB query error" });
@@ -62,6 +72,7 @@ app.delete("/cats/:id", (req, res) => {
             return res.status(500).json({ error: "DB connection error" });
         }
         connection.query("DELETE FROM cats WHERE id = ?", [req.params.id], (qErr, rows) => {
+            connection.release();
             if (qErr) {
                 console.error(" query error", qErr);
                 return res.status(500).json({ error: " query error" });

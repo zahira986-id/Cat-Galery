@@ -21,9 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- API FUNCTIONS ---
 
-function fetchCats() {
+function fetchCats(searchTerm = '') {
     gallery.innerHTML = '<p style="text-align:center; grid-column:1/-1;">Loading cats...</p>';
-    fetch(API_URL)
+
+    let url = API_URL;
+    if (searchTerm) {
+        url += `?search=${encodeURIComponent(searchTerm)}`;
+    }
+
+    fetch(url)
         .then(res => res.json())
         .then(data => {
             if (Array.isArray(data)) {
@@ -170,7 +176,21 @@ function setupEventListeners() {
         openCatModal();
     });
 
-    document.getElementById('reset-btn').addEventListener('click', fetchCats); // Re-fetch from DB
+    // Search listeners
+    const searchInput = document.getElementById('cat-search');
+    const searchBtn = document.getElementById('search-btn');
+
+    searchBtn.addEventListener('click', handleSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+        searchInput.value = '';
+        fetchCats();
+    }); // Re-fetch from DB
 
     document.querySelectorAll('.close-btn, .btn-cancel').forEach(btn => {
         btn.addEventListener('click', closeModals);
@@ -212,6 +232,11 @@ function setupEventListeners() {
             openDeleteConfirm(id);
         }
     });
+}
+
+function handleSearch() {
+    const searchTerm = document.getElementById('cat-search').value.trim();
+    fetchCats(searchTerm);
 }
 
 function handleFormSubmit(event) {
