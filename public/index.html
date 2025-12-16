@@ -13,24 +13,39 @@
 <body>
     <div class="container">
         <header>
+
             <h1>Cats Gallery</h1>
             <p class="subtitle">Une collection de chats adorables</p>
             <div class="header-actions">
-                <div class="search-container">
-                    <input type="text" id="cat-search" placeholder="Rechercher un chat..." class="search-input">
-                    <button id="search-btn" class="btn btn-search"><i class="fas fa-search"></i></button>
-                </div>
+
                 <button id="add-cat-btn" class="btn btn-add">
                     <i class="fas fa-plus"></i> Ajouter un chat
                 </button>
                 <button id="reset-btn" class="btn btn-reset">
                     <i class="fas fa-redo"></i> Réinitialiser
                 </button>
+                <div class="search-container">
+                    <select id="tag-filter" class="search-input" style="width: 150px; cursor: pointer;">
+                        <option value="">Tous les tags</option>
+                    </select>
+                    <input type="text" id="cat-search" placeholder="Rechercher un chat..." class="search-input">
+                    <button id="search-btn" class="btn btn-search"><i class="fas fa-search"></i></button>
+                </div>
             </div>
         </header>
 
+
+
         <div id="gallery" class="gallery">
             <!-- Les cartes de chats seront générées dynamiquement -->
+        </div>
+
+        <div id="pagination-controls" class="pagination-controls" style="display: none;">
+            <button id="prev-page" class="btn btn-secondary" disabled><i class="fas fa-chevron-left"></i>
+                Précédent</button>
+            <span id="page-info">Page 1 sur 1</span>
+            <button id="next-page" class="btn btn-secondary" disabled>Suivant <i
+                    class="fas fa-chevron-right"></i></button>
         </div>
 
         <!-- Formulaire modal pour ajouter/modifier un chat -->

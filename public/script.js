@@ -1,3 +1,4 @@
+
 // API Configuration
 const API_URL = '/cats';
 
@@ -15,28 +16,65 @@ let catToDeleteId = null;
 
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
-    fetchCats();
+    fetchCats('', 1);
+    fetchTags();
     setupEventListeners();
 });
 
 // --- API FUNCTIONS ---
 
-function fetchCats(searchTerm = '') {
+// Pagination State
+let currentPage = 1;
+const itemsPerPage = 6;
+
+function fetchCats(searchTerm = '', page = 1) {
     gallery.innerHTML = '<p style="text-align:center; grid-column:1/-1;">Loading cats...</p>';
+    currentPage = page;
 
     let url = API_URL;
+    let params = [];
+
+    // Always add pagination params
+    params.push(`page=${page}`);
+    params.push(`limit=${itemsPerPage}`);
+
     if (searchTerm) {
-        url += `?search=${encodeURIComponent(searchTerm)}`;
+        params.push(`search=${encodeURIComponent(searchTerm)}`);
+    }
+
+    const tagFilter = document.getElementById('tag-filter').value;
+    if (tagFilter) {
+        params.push(`tag=${encodeURIComponent(tagFilter)}`);
+    }
+
+    if (params.length > 0) {
+        url += `?${params.join('&')}`;
     }
 
     fetch(url)
         .then(res => res.json())
-        .then(data => {
+        .then(response => {
+            // Handle both old array format (fallback) and new object format
+            let data = response;
+            let meta = null;
+
+            if (!Array.isArray(response) && response.data) {
+                data = response.data;
+                meta = response.meta;
+            }
+
             if (Array.isArray(data)) {
                 renderCats(data);
-                updateCatCount(data.length);
+                if (meta) {
+                    renderPagination(meta);
+                    updateCatCount(meta.totalItems);
+                } else {
+                    // Fallback if no meta (e.g. old API) or empty
+                    document.getElementById('pagination-controls').style.display = 'none';
+                    updateCatCount(data.length);
+                }
             } else {
-                console.error('Invalid data:', data);
+                console.error('Invalid data:', response);
                 gallery.innerHTML = '<p class="error">Error loading cats from database.</p>';
             }
         })
@@ -44,6 +82,49 @@ function fetchCats(searchTerm = '') {
             console.error('Fetch error:', err);
             gallery.innerHTML = '<p class="error">Could not connect to database.</p>';
         });
+}
+
+function renderPagination(meta) {
+    const controls = document.getElementById('pagination-controls');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const pageInfo = document.getElementById('page-info');
+
+    if (meta.totalPages <= 1) {
+        controls.style.display = 'none';
+        return;
+    }
+
+    controls.style.display = 'flex';
+    pageInfo.textContent = `Page ${meta.currentPage} sur ${meta.totalPages}`;
+
+    prevBtn.disabled = meta.currentPage <= 1;
+    nextBtn.disabled = meta.currentPage >= meta.totalPages;
+}
+
+// Fetch distinct tags and populate dropdown
+
+// Fetch distinct tags and populate dropdown
+function fetchTags() {
+    fetch('/tags')
+        .then(res => res.json())
+        .then(tags => {
+            const tagFilter = document.getElementById('tag-filter');
+            // Keep the first option (Tous les tags)
+            const defaultOption = tagFilter.firstElementChild;
+            tagFilter.innerHTML = '';
+            tagFilter.appendChild(defaultOption);
+
+            if (Array.isArray(tags)) {
+                tags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag;
+                    option.textContent = tag.charAt(0).toUpperCase() + tag.slice(1); // Capitalize
+                    tagFilter.appendChild(option);
+                });
+            }
+        })
+        .catch(err => console.error('Error fetching tags:', err));
 }
 
 function addCat(catData) {
@@ -179,6 +260,7 @@ function setupEventListeners() {
     // Search listeners
     const searchInput = document.getElementById('cat-search');
     const searchBtn = document.getElementById('search-btn');
+    const tagFilter = document.getElementById('tag-filter');
 
     searchBtn.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => {
@@ -187,10 +269,29 @@ function setupEventListeners() {
         }
     });
 
+    tagFilter.addEventListener('change', () => {
+        const searchTerm = searchInput.value.trim();
+        fetchCats(searchTerm, 1); // Reset to page 1
+    });
+
     document.getElementById('reset-btn').addEventListener('click', () => {
         searchInput.value = '';
-        fetchCats();
+        tagFilter.value = '';
+        fetchCats('', 1);
     }); // Re-fetch from DB
+
+    // Pagination Listeners
+    document.getElementById('prev-page').addEventListener('click', () => {
+        if (currentPage > 1) {
+            const searchTerm = searchInput.value.trim();
+            fetchCats(searchTerm, currentPage - 1);
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', () => {
+        const searchTerm = searchInput.value.trim();
+        fetchCats(searchTerm, currentPage + 1);
+    });
 
     document.querySelectorAll('.close-btn, .btn-cancel').forEach(btn => {
         btn.addEventListener('click', closeModals);
@@ -236,7 +337,7 @@ function setupEventListeners() {
 
 function handleSearch() {
     const searchTerm = document.getElementById('cat-search').value.trim();
-    fetchCats(searchTerm);
+    fetchCats(searchTerm, 1);
 }
 
 function handleFormSubmit(event) {
